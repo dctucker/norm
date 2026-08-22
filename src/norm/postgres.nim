@@ -17,6 +17,7 @@ import model
 import pragmas
 
 export dbtypes
+export rowutils
 
 
 type
@@ -500,6 +501,24 @@ proc delete*[T: Model](dbConn; objs: var openArray[T]) =
 
   for obj in objs.mitems:
     dbConn.delete(obj)
+
+
+# Iterators
+
+proc or_true*(cond: string = ""): string =
+  result = if cond.len > 0: cond else: "TRUE"
+
+iterator items*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: varargs[DbValue, dbValue]): T =
+  var obj = new T
+  let joinStmts = collect(newSeq):
+    for grp in obj.joinGroups:
+      "LEFT JOIN $# AS $# ON $# = $#" % [grp.tbl, grp.tAls, grp.lFld, grp.rFld]
+  let query = "SELECT $# FROM $# $# WHERE $#" % [obj.rfCols.join(", "), T.table, joinStmts.join(" "), cond.or_true]
+
+  for row in dbConn.rows(sql query, params):
+    obj.fromRow(row)
+    yield obj
+    obj = new T
 
 
 # Transactions
