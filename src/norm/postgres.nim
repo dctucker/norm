@@ -520,6 +520,15 @@ iterator items*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: var
     yield obj
     obj = new T
 
+iterator `distinct`*[T: Model](dbConn; t: typedesc[T], field: string, cond: string = "", params: varargs[DbValue, dbValue]): DbValue =
+  let query = "SELECT DISTINCT $# FROM $# WHERE $#" % [field, T.table, cond.or_true]
+  for row in dbConn.rows(sql query, params):
+    yield row[0]
+
+iterator ids*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: varargs[DbValue, dbValue]): int64 =
+  for value in dbConn.distinct(t, "id", cond, params):
+    yield value.i
+
 
 # Transactions
 
