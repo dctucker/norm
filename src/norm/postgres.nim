@@ -520,6 +520,25 @@ iterator items*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: var
     yield obj
     obj = new T
 
+iterator rawItems*[T: ref object](dbConn; qry: string, t: typedesc[T], params: varargs[DbValue, dbValue]): T {.raises: {ValueError, DbError, LoggingError}.} =
+  ##[ Generate a sequence of ref object instances from DB.
+
+  ``qry`` is the raw sql query whose contents are to be parsed into ``t``.
+
+  The columns on ``qry`` must be in the same order as the fields on ``t``.
+  ``objs`` must have at least one item.
+  Table names must be written surrounded by quotation marks and are case sensititve.
+  ]##
+  var obj = new T
+
+  try:
+    for row in dbConn.rows(sql qry, params):
+      obj.fromRow(row)
+      yield obj
+      obj = new T
+  except Exception as e:
+    raise newException(DbError, fmt"Database select query '{qry}' failed! {e.msg}")
+
 iterator `distinct`*[T: Model](dbConn; t: typedesc[T], field: string, cond: string = "", params: varargs[DbValue, dbValue]): DbValue =
   let query = "SELECT DISTINCT $# FROM $# WHERE $#" % [field, T.table, cond.or_true]
   for row in dbConn.rows(sql query, params):
