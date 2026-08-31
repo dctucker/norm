@@ -508,8 +508,8 @@ proc delete*[T: Model](dbConn; objs: var openArray[T]) =
 proc or_true*(cond: string = ""): string =
   result = if cond.len > 0: cond else: "TRUE"
 
-iterator items*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: varargs[DbValue, dbValue]): T =
-  var obj = new T
+iterator mitems*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: varargs[DbValue, dbValue]): var T =
+  var obj {.global.} = new T
   let joinStmts = collect(newSeq):
     for grp in obj.joinGroups:
       "LEFT JOIN $# AS $# ON $# = $#" % [grp.tbl, grp.tAls, grp.lFld, grp.rFld]
@@ -519,6 +519,10 @@ iterator items*[T: Model](dbConn; t: typedesc[T], cond: string = "", params: var
     obj.fromRow(row)
     yield obj
     obj = new T
+
+iterator items*[T: Model](dbCOnn; t: typedesc[T], cond: string = "", params: varargs[DbValue, dbValue]): T =
+  for obj in dbConn.mitems(t, cond, params):
+    yield obj
 
 iterator rawItems*[T: ref object](dbConn; qry: string, t: typedesc[T], params: varargs[DbValue, dbValue]): T {.raises: {ValueError, DbError, LoggingError}.} =
   ##[ Generate a sequence of ref object instances from DB.
