@@ -406,21 +406,23 @@ proc exists*(dbConn; T: typedesc[Model], cond = "TRUE", params: varargs[DbValue,
 
   row[0].b
 
-proc update*[T: Model](dbConn; obj: var T) =
+proc update*[T: Model](dbConn; obj: var T, fields: varargs[string]) =
   ## Update rows for `Model`_ instance and its `Model`_ fields.
 
   checkRo(T)
 
   for fld, val in obj[].fieldPairs:
-    if val.model.isSome:
-      var subMod = get val.model
-      dbConn.update(subMod)
+    if fields.len == 0 and fld in fields:
+      if val.model.isSome:
+        var subMod = get val.model
+        dbConn.update(subMod)
 
   let
     row = obj.toRow()
     phds = collect(newSeq):
       for i, col in obj.cols:
-        "$# = $$$#" %  [col, $(i + 1)]
+        if fields.len == 0 or col in fields:
+          "$# = $$$#" %  [col, $(i + 1)]
     qry = "UPDATE $# SET $# WHERE id = $#" % [T.table, phds.join(", "), $obj.id]
 
   log(qry, $row)
