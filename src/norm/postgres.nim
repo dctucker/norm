@@ -417,17 +417,23 @@ proc update*[T: Model](dbConn; obj: var T, fields: varargs[string]) =
         var subMod = get val.model
         dbConn.update(subMod)
 
+  var params: seq[DbValue]
+  var j = 0
+
   let
     row = obj.toRow()
     phds = collect(newSeq):
       for i, col in obj.cols:
         if fields.len == 0 or col in fields:
-          "$# = $$$#" %  [col, $(i + 1)]
+          inc j
+          params.add row[i]
+          "$# = $$$#" %  [col, $j]
     qry = "UPDATE $# SET $# WHERE id = $#" % [T.table, phds.join(", "), $obj.id]
 
-  log(qry, $row)
+  log(qry, $params)
 
-  dbConn.exec(sql qry, row)
+  echo qry
+  dbConn.exec(sql qry, params)
 
 
 type BulkUpdateValues = Table[string, seq[tuple[id: int64; val: DbValue]]]
